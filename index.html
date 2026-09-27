@@ -39,10 +39,13 @@
   .screen-info { color: var(--screen-text); font-size: 11px; letter-spacing: 1px; }
   .screen-hint { color: var(--screen-dim); font-size: 10px; letter-spacing: 1px; margin-top: 4px; }
 
-  #map { height: 62vh; min-height: 380px; border-radius: 4px; border: 1px solid var(--border); }
+  #map { height: 62vh; min-height: 380px; border-radius: 4px; border: 1px solid var(--border); background: #ccc; }
+  #map .leaflet-tile-pane { transition: filter .3s; }
+  #map.dark-tiles .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9) saturate(0.85); }
   .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--surface2); color: var(--text); }
   .leaflet-popup-content { font-family: var(--font-ui); margin: 10px; }
   .photo-marker { width: 30px; height: 30px; border-radius: 50%; background: var(--pad); border: 2px solid var(--bg); display: flex; align-items: center; justify-content: center; font-size: 15px; box-shadow: 0 0 6px rgba(0,0,0,.5); }
+  #map.dark-tiles .photo-marker { filter: invert(1) hue-rotate(180deg); }
 
   .popup-photo { width: 100%; max-width: 220px; border-radius: 3px; margin-bottom: 8px; display: block; }
   .popup-title { font-family: var(--font-mono); font-size: 12px; color: var(--accent); letter-spacing: 1px; margin-bottom: 6px; }
@@ -198,20 +201,15 @@ const THEMES = [
   { name:'Pink Wave',   dot:'#ff6eb4', dark:true, vars:{'--bg':'#140a12','--surface':'#201020','--surface2':'#2e1530','--border':'#4a1a45','--accent':'#ff6eb4','--accent2':'#ff9de2','--accent3':'#ff3860','--text':'#f0c8e8','--text2':'#7a3a70','--screen-bg':'#0d0510','--screen-text':'#ff6eb4','--screen-dim':'#4a0a35','--pad':'#ff6eb4','--pad-text':'#140a12'}},
 ];
 
-let activeTheme = 0, tileLayer = null;
+let activeTheme = 0;
 function applyTheme(idx) {
   activeTheme = idx;
   const t = THEMES[idx];
   for (const [k,v] of Object.entries(t.vars)) document.documentElement.style.setProperty(k,v);
   document.querySelectorAll('.theme-dot').forEach((d,i) => d.classList.toggle('active', i===idx));
   localStorage.setItem('photoMapTheme', idx);
-  if (map && tileLayer) { map.removeLayer(tileLayer); tileLayer = makeTileLayer(t.dark).addTo(map); }
-}
-function makeTileLayer(dark){
-  const url = dark
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-  return L.tileLayer(url, { maxZoom: 18, attribution: '© OpenStreetMap contributors © CARTO' });
+  const mapEl = document.getElementById('map');
+  if (mapEl) mapEl.classList.toggle('dark-tiles', t.dark);
 }
 function buildThemePicker() {
   document.getElementById('theme-dots').innerHTML = THEMES.map((t,i) =>
@@ -229,7 +227,10 @@ const markerRefs = {};
 
 function initMap(){
   map = L.map('map', { worldCopyJump: true }).setView([20, 10], 2);
-  tileLayer = makeTileLayer(THEMES[activeTheme].dark).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
   markersLayer = L.layerGroup().addTo(map);
   map.on('click', e => openModal(e.latlng));
 }
